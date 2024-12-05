@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
 import os
@@ -66,6 +66,38 @@ def find_answers():
     direct_answers = [filtered_summaries[i] for i in direct_answer_indices]
     print(direct_answers)
     return json.dumps(direct_answers)
+
+
+@app.route("/codes/content/", methods=["POST"])
+def find_content():
+    try:
+        request_data = request.get_json()
+        if not request_data:
+            return jsonify({"error": "Invalid request: No data provided"}), 400
+
+        selected_category = request_data.get("selectedCategory")
+        selected_scenario = request_data.get("selectedScenario")
+
+        if not selected_category or not selected_scenario:
+            return jsonify({"error": "Invalid request: Missing category or scenario"}), 400
+
+        data_file_path = relative_path("data/workbook_mappings.json")
+        with open(data_file_path, "r") as file:
+            data = json.load(file)
+
+        results = []
+        category_data = data.get(selected_category, [])
+        for entry in category_data:
+            if len(entry) > 2 and entry[2] == selected_scenario:
+                results.append({"value1": entry[0], "value2": entry[1]})
+
+        return jsonify({"results": results})
+    except FileNotFoundError:
+        return jsonify({"error": "Data file not found"}), 500
+    except json.JSONDecodeError:
+        return jsonify({"error": "Failed to decode JSON data"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # def get_summaries():
